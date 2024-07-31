@@ -27,9 +27,8 @@ defmodule Itauynab.Download do
     IO.puts("Waiting for file #{filename} in #{@download_path}...")
 
     count_files =
-      @download_path
-      |> Path.join(filename)
-      |> Path.wildcard()
+      filename
+      |> list_files()
       |> Enum.count()
 
     unless(count_files != 0) do
@@ -40,6 +39,11 @@ defmodule Itauynab.Download do
         raise "File not found in #{@download_path}"
       end
     end
+  end
 
+  def list_files(filename) do
+    @download_path
+    |> Path.join(filename)
+    |> Path.wildcard()
   end
 end

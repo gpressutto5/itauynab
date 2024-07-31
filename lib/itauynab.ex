@@ -14,11 +14,11 @@ defmodule Itauynab do
 
     try do
       open_itau_and_login()
-      # download_ofx_file()
-      download_xls_files()
+      download_ofx_file()
+      # download_xls_files()
       # convert_xls_to_csv()
-      # open_ynab_and_login()
-      # upload_ofx_file()
+      open_ynab_and_login()
+      upload_ofx_file()
       # upload_csv_files()
     after
       stop_browser()
@@ -59,6 +59,18 @@ defmodule Itauynab do
     find_element(:id, "acessar") |> click()
   end
 
+  defp open_ynab_and_login do
+    navigate_to("https://app.ynab.com/users/sign_in")
+
+    fill_field({:id, "request_data_email"}, System.get_env("YNAB_EMAIL"))
+    Process.sleep(100)
+    fill_field({:id, "request_data_password"}, System.get_env("YNAB_PASSWORD"))
+    Process.sleep(100)
+    find_element(:id, "login") |> click()
+
+    find_element(:class, "user-logged-in", 50)
+  end
+
   # OFX
   defp download_ofx_file do
     find_element(:id, "HomeLogo", 40) |> click()
@@ -80,6 +92,52 @@ defmodule Itauynab do
 
     execute_script(~s[exportarExtratoArquivo('formExportarExtrato', 'ofx');])
     Download.wait_for_download!("*.ofx")
+  end
+
+  defp upload_ofx_file do
+    navigate_to(
+      "https://app.ynab.com/#{System.get_env("YNAB_BUDGET_ID")}/accounts/#{System.get_env("YNAB_CHECKING_ACCOUNT_ID")}"
+    )
+
+    find_element(:class, "accounts-toolbar-file-import-transactions", 100) |> click()
+
+    file = Download.list_files("*.ofx") |> Enum.at(0)
+    session_id = Hound.current_session_id()
+    element = find_element(:css, ".file-picker > input[type=file]")
+
+    Hound.RequestUtils.make_req(:post, "session/#{session_id}/element/#{element}/value", %{
+      value: ["#{file}"]
+    })
+
+    include_earlier_transactions_el = find_element(:css, ".import-preview-warning > .ynab-checkbox")
+    unless include_earlier_transactions_el |> has_class?("is-checked") do
+      include_earlier_transactions_el |> click()
+    end
+
+    swap_memo_with_payee_el = find_element(:class, "swap-memo-with-payee")
+    unless swap_memo_with_payee_el |> has_class?("is-checked") do
+      swap_memo_with_payee_el |> click()
+    end
+
+    import_memos_el = find_element(:class, "import-memos")
+    unless import_memos_el |> has_class?("is-checked") do
+      import_memos_el |> click()
+    end
+
+    find_element(
+      :css,
+      ".modal-import-review > .modal > .modal-fresh-footer > .ynab-button.primary"
+    )
+    |> click()
+
+    find_element(
+      :css,
+      ".modal-import-successful > .modal > .modal-fresh-footer > .ynab-button.primary",
+      20
+    )
+    |> click()
+
+    File.rm!(file)
   end
 
   # XLS
@@ -106,8 +164,12 @@ defmodule Itauynab do
 
     # Process.sleep(3000)
 
-
-    a = Jason.decode!(execute_script(~s[return(JSON.stringify(angular.element(document.getElementById("appController")).scope().ac))]))
+    a =
+      Jason.decode!(
+        execute_script(
+          ~s[return(JSON.stringify(angular.element(document.getElementById("appController")).scope().ac))]
+        )
+      )
 
     take_screenshot("1.png")
   end

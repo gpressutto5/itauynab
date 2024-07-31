@@ -124,11 +124,15 @@ defmodule Itauynab do
       import_memos_el |> click()
     end
 
+    Process.sleep(500)
+
     find_element(
       :css,
       ".modal-import-review > .modal > .modal-fresh-footer > .ynab-button.primary"
     )
     |> click()
+
+    Process.sleep(500)
 
     find_element(
       :css,
@@ -136,6 +140,8 @@ defmodule Itauynab do
       20
     )
     |> click()
+
+    Process.sleep(1000)
 
     File.rm!(file)
   end

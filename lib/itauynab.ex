@@ -14,8 +14,8 @@ defmodule Itauynab do
 
     try do
       open_itau_and_login()
-      download_ofx_file()
-      # download_xls_files()
+      # download_ofx_file()
+      download_xls_files()
       # convert_xls_to_csv()
       # open_ynab_and_login()
       # upload_ofx_file()
@@ -50,7 +50,11 @@ defmodule Itauynab do
     # PASSWORD
     System.get_env("ITAU_SENHA")
     |> String.graphemes()
-    |> Enum.each(&execute_script(~s[Array.from(document.querySelector('.teclas').childNodes).find(e => e?.text?.includes("#{&1}")).click()]))
+    |> Enum.each(
+      &execute_script(
+        ~s[Array.from(document.querySelector('.teclas').childNodes).find(e => e?.text?.includes("#{&1}")).click()]
+      )
+    )
 
     find_element(:id, "acessar") |> click()
   end
@@ -76,6 +80,36 @@ defmodule Itauynab do
 
     execute_script(~s[exportarExtratoArquivo('formExportarExtrato', 'ofx');])
     Download.wait_for_download!("*.ofx")
+  end
+
+  # XLS
+  defp download_xls_files() do
+    find_element(:id, "HomeLogo", 40) |> click()
+
+    find_element(:id, "cartao-card-accordion", 40) |> click()
+
+    # The card we click doesn't matter as it will always open the first one
+    find_element(
+      :xpath,
+      "//*[@id=\"content-cartao-card-accordion\"]/div[1]/table/tbody/tr[1]/td[1]/div/div[1]/a"
+    )
+    |> click()
+
+    Process.sleep(5000)
+
+    # find_element(:id, "exp_button") |> click()
+    last_four = System.get_env("ITAU_CARD_LAST_FOUR")
+
+    # execute_script(
+    #   ~s[Array.from(document.querySelectorAll('.selecao__opcao')).find(e => e?.innerText?.includes("#{last_four}")).click()]
+    # )
+
+    # Process.sleep(3000)
+
+
+    a = Jason.decode!(execute_script(~s[return(JSON.stringify(angular.element(document.getElementById("appController")).scope().ac))]))
+
+    take_screenshot("1.png")
   end
 
   # Browser

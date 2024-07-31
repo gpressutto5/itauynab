@@ -23,7 +23,8 @@ defmodule Itauynab.MixProject do
     [
       {:hound, "~> 1.1"},
       {:httpoison, "~> 1.8"},
-      {:envy, "~> 1.1.1"}
+      {:envy, "~> 1.1.1"},
+      {:jason, "~> 1.4"}
     ]
   end
 end

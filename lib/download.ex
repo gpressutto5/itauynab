@@ -2,8 +2,6 @@ defmodule Itauynab.Download do
 
   import Hound.RequestUtils
 
-  @download_path Path.join([File.cwd!(), "tmp/downloads"])
-
   def set_download_path do
     session_id = Hound.current_session_id()
 
@@ -12,7 +10,7 @@ defmodule Itauynab.Download do
       "session/#{session_id}/chromium/send_command",
       %{
         cmd: "Page.setDownloadBehavior",
-        params: %{behavior: "allow", downloadPath: @download_path}
+        params: %{behavior: "allow", downloadPath: download_path()}
       }
     )
 
@@ -20,11 +18,11 @@ defmodule Itauynab.Download do
   end
 
   def clear_downloads do
-    File.rm_rf(@download_path)
+    File.rm_rf(download_path())
   end
 
   def wait_for_download!(filename, retries \\ 5, wait_time \\ 1000) do
-    IO.puts("Waiting for file #{filename} in #{@download_path}...")
+    IO.puts("Waiting for file #{filename} in #{download_path()}...")
 
     count_files =
       filename
@@ -36,14 +34,18 @@ defmodule Itauynab.Download do
         Process.sleep(wait_time)
         wait_for_download!(filename, retries - 1, wait_time)
       else
-        raise "File not found in #{@download_path}"
+        raise "File not found in #{download_path()}"
       end
     end
   end
 
   def list_files(filename) do
-    @download_path
+    download_path()
     |> Path.join(filename)
     |> Path.wildcard()
+  end
+
+  def download_path do
+    Path.join([File.cwd!(), "tmp/downloads"])
   end
 end

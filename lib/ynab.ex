@@ -29,9 +29,13 @@ defmodule Itauynab.Ynab do
       value: ["#{file}"]
     })
 
-    include_earlier_transactions_el = find_element(:css, ".import-preview-warning > .ynab-checkbox")
-    unless include_earlier_transactions_el |> has_class?("is-checked") do
-      include_earlier_transactions_el |> click()
+    include_earlier_transactions_el = search_element(:css, ".import-preview-warning > .ynab-checkbox")
+    case include_earlier_transactions_el do
+      {:error, _err} -> IO.puts("Element not found")
+      {:ok, el} ->
+        unless el |> has_class?("is-checked") do
+          el |> click()
+        end
     end
 
     swap_memo_with_payee_el = find_element(:class, "swap-memo-with-payee")
@@ -41,6 +45,63 @@ defmodule Itauynab.Ynab do
 
     import_memos_el = find_element(:class, "import-memos")
     unless import_memos_el |> has_class?("is-checked") do
+      import_memos_el |> click()
+    end
+
+    Process.sleep(500)
+
+    find_element(
+      :css,
+      ".modal-import-review > .modal > .modal-fresh-footer > .ynab-button.primary"
+    )
+    |> click()
+
+    Process.sleep(500)
+
+    find_element(
+      :css,
+      ".modal-import-successful > .modal > .modal-fresh-footer > .ynab-button.primary",
+      20
+    )
+    |> click()
+
+    Process.sleep(1000)
+
+    File.rm!(file)
+  end
+
+  def upload_csv_file do
+    navigate_to(
+      "https://app.ynab.com/#{System.get_env("YNAB_BUDGET_ID")}/accounts/#{System.get_env("YNAB_CREDIT_CARD_ACCOUNT_ID")}"
+    )
+
+    find_element(:class, "accounts-toolbar-file-import-transactions", 100) |> click()
+
+    file = Download.list_files("*.csv") |> Enum.at(0)
+    session_id = Hound.current_session_id()
+    element = find_element(:css, ".file-picker > input[type=file]")
+
+    Hound.RequestUtils.make_req(:post, "session/#{session_id}/element/#{element}/value", %{
+      value: ["#{file}"]
+    })
+
+
+    include_earlier_transactions_el = search_element(:css, ".import-preview-warning > .ynab-checkbox")
+    case include_earlier_transactions_el do
+      {:error, _err} -> IO.puts("Element not found")
+      {:ok, el} ->
+        unless el |> has_class?("is-checked") do
+          el |> click()
+        end
+    end
+
+    swap_memo_with_payee_el = find_element(:class, "swap-memo-with-payee")
+    if swap_memo_with_payee_el |> has_class?("is-checked") do
+      swap_memo_with_payee_el |> click()
+    end
+
+    import_memos_el = find_element(:class, "import-memos")
+    if import_memos_el |> has_class?("is-checked") do
       import_memos_el |> click()
     end
 

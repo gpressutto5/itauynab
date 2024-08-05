@@ -15,11 +15,10 @@ defmodule Itauynab do
     try do
       Itau.open_and_login()
       Itau.download_ofx_file()
-      # Itau.download_xls_files()
-      # convert_xls_to_csv()
+      Itau.download_csv_file()
       Ynab.open_and_login()
       Ynab.upload_ofx_file()
-      # upload_csv_files()
+      Ynab.upload_csv_file()
     after
       stop_browser()
     end

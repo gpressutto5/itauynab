@@ -1,6 +1,7 @@
 defmodule Itauynab.Itau do
   use Hound.Helpers
   alias Itauynab.Download
+  require CSV
 
   def open_and_login do
     # set_window_size(current_window_handle(), 0, 0)
@@ -57,36 +58,56 @@ defmodule Itauynab.Itau do
     Download.wait_for_download!("*.ofx")
   end
 
-  def download_xls_files() do
+  def download_csv_file() do
     find_element(:id, "HomeLogo", 40) |> click()
 
-    find_element(:id, "cartao-card-accordion", 40) |> click()
+    Process.sleep(3000)
+
+    find_element(:id, "cartao-card-accordion") |> click()
 
     # The card we click doesn't matter as it will always open the first one
     find_element(
       :xpath,
-      "//*[@id=\"content-cartao-card-accordion\"]/div[1]/table/tbody/tr[1]/td[1]/div/div[1]/a"
+      "//*[@id=\"content-cartao-card-accordion\"]/div[1]/table/tbody/tr[1]/td[1]/div/div[1]/a",
+      40
     )
     |> click()
 
     Process.sleep(5000)
 
-    # find_element(:id, "exp_button") |> click()
-    _last_four = System.get_env("ITAU_CARD_LAST_FOUR")
+    last_four = System.get_env("ITAU_CARD_LAST_FOUR")
 
-    # execute_script(
-    #   ~s[Array.from(document.querySelectorAll('.selecao__opcao')).find(e => e?.innerText?.includes("#{last_four}")).click()]
-    # )
+    execute_script(
+      ~s[Array.from(document.querySelectorAll('.selecao__opcao')).find(e => e?.innerText?.includes("#{last_four}")).click()]
+    )
 
-    # Process.sleep(3000)
+    Process.sleep(3000)
 
-    _a =
-      Jason.decode!(
-        execute_script(
-          ~s[return(JSON.stringify(angular.element(document.getElementById("appController")).scope().ac))]
-        )
-      )
+    last_four
+    |> parse_credit_card_transactions()
+  end
 
-    take_screenshot("1.png")
+  defp parse_credit_card_transactions(last_four) do
+      Path.join([File.cwd!(), "/lib/credit_card_script.js"])
+      |> File.read!()
+      |> execute_script([last_four])
+      |> Jason.decode!()
+      |> make_csv()
+  end
+
+  def make_csv(transactions) do
+    csv = transactions
+    |> Enum.map(fn transaction ->
+      Enum.map(transaction, fn {key, value} ->
+        {String.to_atom(key), value}
+      end)
+      |> Enum.into(%{})
+    end)
+    |> CSV.encode(headers: [date: "Date", payee: "Payee", outflow: "Outflow"])
+    |> Enum.to_list()
+    |> Enum.join()
+
+    Path.join([Download.download_path, "credit_card.csv"])
+    |> File.write!(csv)
   end
 end

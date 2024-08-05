@@ -21,9 +21,10 @@ defmodule Itauynab.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
+      {:csv, "~> 3.2"},
+      {:envy, "~> 1.1.1"},
       {:hound, "~> 1.1"},
       {:httpoison, "~> 1.8"},
-      {:envy, "~> 1.1.1"},
       {:jason, "~> 1.4"}
     ]
   end

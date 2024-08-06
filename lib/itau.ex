@@ -89,29 +89,79 @@ defmodule Itauynab.Itau do
 
     last_four
     |> parse_credit_card_transactions()
+
+    balance =
+      find_element(:css, ".c-category-status__total.aberta") |> visible_text() |> parse_amount()
+
+    find_element(:css, ".icon-itaufonts_full_parcelamento") |> click()
+    Process.sleep(3000)
+    find_element(:name, "CORPO") |> focus_frame()
+    find_element(:class, "TRNinputBTN", 40)
+    Process.sleep(1000)
+
+    execute_script(
+      ~s[Array.from(document.querySelectorAll('.TRNinput')).find(e => e?.value?.includes("#{last_four}|")).click()]
+    )
+
+    find_element(:class, "TRNinputBTN") |> click()
+
+    {{current_year, current_month, _}, _} = :calendar.local_time()
+    final_month = current_month + 3
+    final_year = current_year
+
+    {final_month, final_year} =
+      if final_month > 12 do
+        {final_month - 12, final_year + 1}
+      else
+        {final_month, final_year}
+      end
+
+    find_element(:name, "Mes_Inicio") |> fill_field("#{current_month}")
+    find_element(:name, "Ano_Inicial") |> fill_field("#{current_year}")
+    find_element(:name, "Mes_Final") |> fill_field("#{final_month}")
+    find_element(:name, "Ano_Final") |> fill_field("#{final_year}")
+    Process.sleep(500)
+    execute_script("continuar();")
+    Process.sleep(1000)
+
+    instalments_balance =
+      case search_element(
+             :xpath,
+             "//*[@id=\"TRNcontainer01\"]/table[4]/tbody/tr/td/table[1]/tbody/tr/td/table/tbody/tr/td[1]/table/tbody/tr[2]/td"
+           ) do
+        {:error, _err} ->
+          IO.puts("No instalments found")
+          0
+
+        {:ok, el} ->
+          el |> visible_text() |> parse_amount()
+      end
+
+    balance + instalments_balance
   end
 
   defp parse_credit_card_transactions(last_four) do
-      Path.join([File.cwd!(), "/lib/credit_card_script.js"])
-      |> File.read!()
-      |> execute_script([last_four])
-      |> Jason.decode!()
-      |> make_csv()
+    Path.join([File.cwd!(), "/lib/credit_card_script.js"])
+    |> File.read!()
+    |> execute_script([last_four])
+    |> Jason.decode!()
+    |> make_csv()
   end
 
   def make_csv(transactions) do
-    csv = transactions
-    |> Enum.map(fn transaction ->
-      Enum.map(transaction, fn {key, value} ->
-        {String.to_atom(key), value}
+    csv =
+      transactions
+      |> Enum.map(fn transaction ->
+        Enum.map(transaction, fn {key, value} ->
+          {String.to_atom(key), value}
+        end)
+        |> Enum.into(%{})
       end)
-      |> Enum.into(%{})
-    end)
-    |> CSV.encode(headers: [date: "Date", payee: "Payee", outflow: "Outflow"])
-    |> Enum.to_list()
-    |> Enum.join()
+      |> CSV.encode(headers: [date: "Date", payee: "Payee", outflow: "Outflow"])
+      |> Enum.to_list()
+      |> Enum.join()
 
-    Path.join([Download.download_path, "credit_card.csv"])
+    Path.join([Download.download_path(), "credit_card.csv"])
     |> File.write!(csv)
   end
 end

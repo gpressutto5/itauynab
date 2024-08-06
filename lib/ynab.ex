@@ -82,70 +82,12 @@ defmodule Itauynab.Ynab do
         str -> str |> String.to_float()
       end
 
-    reconcile(balance, allowed_diff)
+      if System.get_env("YNAB_SHOULD_RECONCILE") === "1" do
+        reconcile(balance, allowed_diff)
+      end
   end
 
-  def reconcile(nil, _), do: nil
-
-  def reconcile(balance, allowed_diff_percantage) when is_integer(balance) do
-    IO.puts("Reconciling account balance (#{balance})")
-    find_element(:class, "accounts-header-reconcile") |> click()
-    find_element(:class, "modal-account-reconcile-no") |> click()
-
-    execute_script(
-      ~s[el = document.querySelector('.ynab-new-currency-input input'); el.value = ynab.formatCurrency(#{balance * 10});el.dispatchEvent(new Event('input', { bubbles: true }))]
-    )
-
-    find_element(:css, ".modal-account-reconcile-right-buttons button") |> click()
-    Process.sleep(500)
-
-    tooltip_button =
-      search_element(:css, ".modal-account-reconcile-difference-actions > .ynab-button.primary")
-
-    case tooltip_button do
-      {:error, _err} ->
-        IO.puts("Tooltip button not found")
-
-      {:ok, el} ->
-        el |> click()
-    end
-
-    adjsutment_label = search_element(:class, "accounts-adjustment-label")
-
-    case adjsutment_label do
-      {:error, _err} ->
-        IO.puts("No adjustment needed")
-        nil
-
-      {:ok, el} ->
-        IO.puts("Adjusting balance")
-        diff_balance = find_within_element(el, :tag, "strong") |> visible_text() |> parse_amount()
-
-        current_balance =
-          find_element(:css, ".accounts-header-balances-cleared > span")
-          |> visible_text()
-          |> parse_amount()
-
-        case should_adjust(diff_balance, current_balance, allowed_diff_percantage) do
-          true ->
-            find_element(:css, ".accounts-adjustment button.ynab-button.primary") |> click()
-            IO.puts("Balance adjust by #{diff_balance}")
-
-          false ->
-            IO.puts("Balance not adjusted")
-        end
-    end
-  end
-
-  def should_adjust(_, 0, _), do: false
-
-  def should_adjust(diff_balance, current_balance, allowed_diff_percantage) do
-    # get percentage diff
-    percentage_diff = diff_balance / current_balance
-    percentage_diff <= allowed_diff_percantage
-  end
-
-  def upload_csv_file do
+  def upload_csv_file(balance) do
     navigate_to(
       "https://app.ynab.com/#{System.get_env("YNAB_BUDGET_ID")}/accounts/#{System.get_env("YNAB_CREDIT_CARD_ACCOUNT_ID")}"
     )
@@ -205,5 +147,75 @@ defmodule Itauynab.Ynab do
     Process.sleep(1000)
 
     File.rm!(file)
+
+    allowed_diff =
+      case System.get_env("YNAB_CREDIT_ALLOWED_DIFF_PERCENTAGE") do
+        nil -> 0
+        str -> str |> String.to_float()
+      end
+
+    if System.get_env("YNAB_SHOULD_RECONCILE") === "1" do
+      reconcile(balance, allowed_diff)
+    end
+  end
+
+  defp reconcile(nil, _), do: nil
+
+  defp reconcile(balance, allowed_diff_percantage) when is_integer(balance) do
+    IO.puts("Reconciling...")
+    find_element(:class, "accounts-header-reconcile") |> click()
+    find_element(:class, "modal-account-reconcile-no") |> click()
+
+    execute_script(
+      ~s[el = document.querySelector('.ynab-new-currency-input input'); el.value = ynab.formatCurrency(#{balance * 10});el.dispatchEvent(new Event('input', { bubbles: true }))]
+    )
+
+    find_element(:css, ".modal-account-reconcile-right-buttons button") |> click()
+    Process.sleep(500)
+
+    tooltip_button =
+      search_element(:css, ".modal-account-reconcile-difference-actions > .ynab-button.primary")
+
+    case tooltip_button do
+      {:error, _err} ->
+        IO.puts("Tooltip button not found")
+
+      {:ok, el} ->
+        el |> click()
+    end
+
+    adjsutment_label = search_element(:class, "accounts-adjustment-label")
+
+    case adjsutment_label do
+      {:error, _err} ->
+        IO.puts("No adjustment needed")
+        nil
+
+      {:ok, el} ->
+        IO.puts("Adjusting balance")
+        diff_balance = find_within_element(el, :tag, "strong") |> visible_text() |> parse_amount()
+
+        current_balance =
+          find_element(:css, ".accounts-header-balances-cleared > span")
+          |> visible_text()
+          |> parse_amount()
+
+        case should_adjust(diff_balance, current_balance, allowed_diff_percantage) do
+          true ->
+            find_element(:css, ".accounts-adjustment button.ynab-button.primary") |> click()
+            IO.puts("Balance adjust by #{diff_balance}")
+
+          false ->
+            IO.puts("Balance not adjusted")
+        end
+    end
+  end
+
+  defp should_adjust(_, 0, _), do: false
+
+  defp should_adjust(diff_balance, current_balance, allowed_diff_percantage) do
+    # get percentage diff
+    percentage_diff = diff_balance / current_balance
+    percentage_diff <= allowed_diff_percantage
   end
 end

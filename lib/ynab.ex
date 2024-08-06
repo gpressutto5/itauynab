@@ -130,10 +130,10 @@ defmodule Itauynab.Ynab do
           true ->
             find_element(:css, ".accounts-adjustment button.ynab-button.primary") |> click()
             IO.puts("Balance adjust by #{diff_balance}")
-        end
 
-      false ->
-        IO.puts("Balance not adjusted")
+          false ->
+            IO.puts("Balance not adjusted")
+        end
     end
   end
 

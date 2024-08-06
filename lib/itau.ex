@@ -1,6 +1,7 @@
 defmodule Itauynab.Itau do
   use Hound.Helpers
   alias Itauynab.Download
+  import Itauynab.Helpers, only: [parse_amount: 1]
   require CSV
 
   def open_and_login do
@@ -41,6 +42,8 @@ defmodule Itauynab.Itau do
 
     find_element(:id, "saldo-extrato-card-accordion", 40) |> click()
 
+    balance = find_element(:id, "saldo") |> visible_text() |> parse_amount()
+
     find_element(
       :xpath,
       "//*[@id=\"content-saldo-extrato-card-accordion\"]/div[1]/div[2]/contas-saldo-balance/div/div[2]/button"
@@ -56,6 +59,7 @@ defmodule Itauynab.Itau do
 
     execute_script(~s[exportarExtratoArquivo('formExportarExtrato', 'ofx');])
     Download.wait_for_download!("*.ofx")
+    balance
   end
 
   def download_csv_file() do

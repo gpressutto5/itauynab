@@ -14,10 +14,10 @@ defmodule Itauynab do
 
     try do
       Itau.open_and_login()
-      Itau.download_ofx_file()
+      checking_balance = Itau.download_ofx_file()
       Itau.download_csv_file()
       Ynab.open_and_login()
-      Ynab.upload_ofx_file()
+      Ynab.upload_ofx_file(checking_balance)
       Ynab.upload_csv_file()
     after
       stop_browser()

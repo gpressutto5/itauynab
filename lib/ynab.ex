@@ -97,11 +97,24 @@ defmodule Itauynab.Ynab do
     )
 
     find_element(:css, ".modal-account-reconcile-right-buttons button") |> click()
+    Process.sleep(500)
 
-    adjsutment_label = search_element(:class, ".accounts-adjustment-label")
+    tooltip_button =
+      search_element(:css, ".modal-account-reconcile-difference-actions > .ynab-button.primary")
+
+    case tooltip_button do
+      {:error, _err} ->
+        IO.puts("Tooltip button not found")
+
+      {:ok, el} ->
+        el |> click()
+    end
+
+    adjsutment_label = search_element(:class, "accounts-adjustment-label")
 
     case adjsutment_label do
       {:error, _err} ->
+        IO.puts("No adjustment needed")
         nil
 
       {:ok, el} ->

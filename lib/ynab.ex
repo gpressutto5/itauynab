@@ -76,7 +76,13 @@ defmodule Itauynab.Ynab do
 
     File.rm!(file)
 
-    reconcile(balance, Float.parse(System.get_env("YNAB_ALLOWED_DIFF_PERCENTAGE")))
+    allowed_diff =
+      case System.get_env("YNAB_CHECKING_ALLOWED_DIFF_PERCENTAGE") do
+        nil -> 0
+        str -> str |> String.to_float()
+      end
+
+    reconcile(balance, allowed_diff)
   end
 
   def reconcile(nil, _), do: nil

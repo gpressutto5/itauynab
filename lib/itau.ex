@@ -94,6 +94,10 @@ defmodule Itauynab.Itau do
     last_four
     |> parse_credit_card_transactions()
 
+    execute_script(
+      ~s[Array.from(document.querySelectorAll('.tab.abasButton')).find(e => e?.innerText?.includes("aberta")).click()]
+    )
+
     balance =
       find_element(:css, ".c-category-status__total.aberta") |> visible_text() |> parse_amount()
 

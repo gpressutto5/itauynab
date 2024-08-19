@@ -23,6 +23,10 @@ defmodule Itauynab.Itau do
 
     find_element(:id, "idl-more-access-submit-button") |> click()
 
+    Process.sleep(500)
+
+    window_handles() |> List.last() |> focus_window()
+
     find_element(:id, "frmKey", 40)
 
     # PASSWORD

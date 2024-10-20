@@ -14,7 +14,7 @@ defmodule Itauynab.Itau do
     end
 
     # LOGIN
-    find_element(:id, "marco-civil-btn-ok") |> click()
+    find_element(:id, "itau-cookie-consent-banner-accept-cookies-btn") |> click()
 
     find_element(:id, "open-modal-more-access-zoom") |> click()
 
@@ -43,6 +43,8 @@ defmodule Itauynab.Itau do
 
   def download_ofx_file do
     find_element(:id, "HomeLogo", 40) |> click()
+
+    Process.sleep(3000)
 
     find_element(:id, "saldo-extrato-card-accordion", 40) |> click()
 
